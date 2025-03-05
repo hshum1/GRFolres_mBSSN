@@ -77,7 +77,7 @@ void BinaryBH4dSTLevel::specificEvalRHS(GRLevelData &a_soln, GRLevelData &a_rhs,
         ModifiedCCZ4RHS<FourDerivScalarTensorWithCouplingAndPotential,
                         ModifiedPunctureGauge, FourthOrderDerivatives>
             my_modified_ccz4(fdst, m_p.modified_ccz4_params,
-                             modified_puncture_gauge, m_dx, m_p.sigma,
+                             modified_puncture_gauge, m_dx, m_p.sigma, m_p.formulation, m_p.rescale_sigma, 
                              m_p.center, m_p.G_Newton);
         BoxLoops::loop(my_modified_ccz4, a_soln, a_rhs, EXCLUDE_GHOST_CELLS);
     }
@@ -86,7 +86,7 @@ void BinaryBH4dSTLevel::specificEvalRHS(GRLevelData &a_soln, GRLevelData &a_rhs,
         ModifiedCCZ4RHS<FourDerivScalarTensorWithCouplingAndPotential,
                         ModifiedPunctureGauge, SixthOrderDerivatives>
             my_modified_ccz4(fdst, m_p.modified_ccz4_params,
-                             modified_puncture_gauge, m_dx, m_p.sigma,
+                             modified_puncture_gauge, m_dx, m_p.sigma, m_p.formulation, m_p.rescale_sigma, 
                              m_p.center, m_p.G_Newton);
         BoxLoops::loop(my_modified_ccz4, a_soln, a_rhs, EXCLUDE_GHOST_CELLS);
     }
@@ -158,7 +158,7 @@ void BinaryBH4dSTLevel::specificPostTimeStep()
                                  ModifiedPunctureGauge, FourthOrderDerivatives>
                 weyl4(fdst, m_p.modified_ccz4_params, modified_puncture_gauge,
                       m_p.extraction_params.extraction_center, m_dx, m_p.sigma,
-                      CCZ4RHS<>::USE_CCZ4);
+                      CCZ4RHS<>::USE_CCZ4, m_p.rescale_sigma);
             // CCZ4 is required since this code only works in this
             // formulation
             BoxLoops::loop(weyl4, m_state_new, m_state_diagnostics,
@@ -267,7 +267,7 @@ void BinaryBH4dSTLevel::prePlotLevel()
                              ModifiedPunctureGauge, FourthOrderDerivatives>
             weyl4(fdst, m_p.modified_ccz4_params, modified_puncture_gauge,
                   m_p.extraction_params.extraction_center, m_dx, m_p.sigma,
-                  CCZ4RHS<>::USE_CCZ4);
+                  CCZ4RHS<>::USE_CCZ4, m_p.rescale_sigma);
         // CCZ4 is required since this code only works in this formulation
         RhoDiagnostics<FourDerivScalarTensorWithCouplingAndPotential>
             rho_diagnostics(fdst, m_dx, m_p.center);

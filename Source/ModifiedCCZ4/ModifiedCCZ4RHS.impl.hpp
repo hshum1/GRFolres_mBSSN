@@ -15,11 +15,11 @@
 template <class theory_t, class gauge_t, class deriv_t>
 ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::ModifiedCCZ4RHS(
     theory_t a_theory, modified_params_t a_params, gauge_t a_gauge, double a_dx,
-    double a_sigma, const std::array<double, CH_SPACEDIM> a_center,
+    double a_sigma, int a_formulation,int a_rescale_sigma, const std::array<double, CH_SPACEDIM> a_center,
     double a_G_Newton)
-    : CCZ4RHS<gauge_t, deriv_t>(a_params, a_dx, a_sigma, CCZ4RHS<>::USE_CCZ4,
+    : CCZ4RHS<gauge_t, deriv_t>(a_params, a_dx, a_sigma, a_formulation, a_rescale_sigma, 
                                 0.0 /*No cosmological constant*/),
-      my_theory(a_theory), my_gauge(a_gauge), m_center(a_center),
+      my_theory(a_theory), my_gauge(a_gauge), m_center(a_center), m_formulation(a_formulation),  m_rescale_sigma(a_rescale_sigma),
       m_G_Newton(a_G_Newton)
 {
 }
@@ -54,8 +54,21 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::compute(
     // solve linear system for the theory fields that require it (e.g. 4dST)
     my_theory.solve_lhs(theory_rhs, theory_vars, d1, d2, advec, coords);
 
+      data_t sigma; // KO coefficient
+
+    if (m_rescale_sigma)
+    {
+        // rescale KO coefficient with lapse so that it is zero near puncture
+        sigma = this->m_sigma * pow(theory_vars.lapse, 6.0);
+    }
+    else
+    {
+        // constant KO coefficient
+        sigma = this->m_sigma;
+    }
+
     // Add dissipation to all terms
-    this->m_deriv.add_dissipation(theory_rhs, current_cell, this->m_sigma);
+    this->m_deriv.add_dissipation(theory_rhs, current_cell, sigma);
 
     // Write the rhs into the output FArrayBox
     current_cell.store_vars(theory_rhs);
@@ -82,8 +95,16 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
     auto h_UU = compute_inverse_sym(theory_vars.h);
     auto chris = compute_christoffel(d1.h, h_UU);
     Tensor<1, data_t> Z_over_chi;
+
+        if (m_formulation == CCZ4RHS<>::USE_BSSN)
+    {
+        FOR(i) Z_over_chi[i] = 0.0;
+    }
+    else
+    {
     FOR(i)
     Z_over_chi[i] = 0.5 * (theory_vars.Gamma[i] - chris.contracted[i]);
+    }
     auto ricci0 = CCZ4Geometry::compute_ricci_Z(theory_vars, d1, d2, h_UU,
                                                 chris, {0., 0., 0.});
 
@@ -118,6 +139,31 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
     else
         kappa1_times_lapse = this->m_params.kappa1 * theory_vars.lapse;
 
+    if (m_formulation == CCZ4RHS<>::USE_BSSN)
+    {
+        // Calculate elements of the decomposed stress energy tensor
+        RhoAndSi<data_t> rho_and_Si =
+            my_theory.compute_rho_and_Si(theory_vars, d1, d2, coords);
+        //SijTFAndS<data_t> Sij_TF_and_S =
+        //    my_theory.compute_Sij_TF_and_S(theory_vars, d1, d2, advec, coords);
+
+        theory_rhs.Theta += 0.0;
+
+        theory_rhs.K += 0.5 * factor_b_of_x *
+                        theory_vars.lapse * (GR_SPACEDIM - 2.) / (GR_SPACEDIM - 1.) * (((GR_SPACEDIM - 1.)/GR_SPACEDIM) * theory_vars.K * theory_vars.K
+                     - tr_A2 + ricci0.scalar - 16.0 * M_PI * m_G_Newton * rho_and_Si.rho);
+
+        FOR(i)
+        {
+            FOR(j)
+            {
+                theory_rhs.Gamma[i] += 2. * theory_vars.lapse * h_UU[i][j] * Ni[j]/(1. + b_of_x);
+            }
+        }
+        
+    }
+    else
+    {
     theory_rhs.K +=
         factor_b_of_x *
         (theory_vars.lapse * (-0.5 * theory_vars.K * theory_vars.K +
@@ -155,6 +201,7 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
             }
         }
     }
+    }
 
     theory_rhs.lapse += factor_a_of_x * this->m_params.lapse_coeff *
                         pow(theory_vars.lapse, this->m_params.lapse_power) *
@@ -185,6 +232,28 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
 
     const auto h_UU = compute_inverse_sym(theory_vars.h);
     const auto chris = compute_christoffel(d1.h, h_UU);
+    const data_t chi_regularised = simd_max(theory_vars.chi, 1e-6);
+
+    Tensor<2, data_t> covdtilde_A[CH_SPACEDIM];
+
+    FOR(i, j, k)
+    {
+        covdtilde_A[i][j][k] = d1.A[j][k][i];
+        FOR(l)
+        {
+            covdtilde_A[i][j][k] += -chris.ULL[l][i][j] * theory_vars.A[l][k] -
+                                    chris.ULL[l][i][k] * theory_vars.A[l][j];
+        }
+    }
+
+    Tensor<1, data_t> Ni;
+    FOR(i) { Ni[i] = -(GR_SPACEDIM - 1.) * d1.K[i] / (double)GR_SPACEDIM; }
+    FOR(i, j, k)
+    {
+        Ni[i] += h_UU[j][k] * (covdtilde_A[k][j][i] -
+                               GR_SPACEDIM * theory_vars.A[i][j] * d1.chi[k] /
+                                   (2. * chi_regularised));
+    }
 
     // Calculate elements of the decomposed stress energy tensor
     RhoAndSi<data_t> rho_and_Si =
@@ -197,7 +266,30 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
 
     my_gauge.compute_a_and_b(a_of_x, b_of_x, coords);
 
+    data_t factor_a_of_x = a_of_x / (1. + a_of_x);
+    data_t factor_b_of_x = b_of_x / (1. + b_of_x);
+
     // Update RHS
+    if (m_formulation == CCZ4RHS<>::USE_BSSN)
+    {
+    theory_rhs.K += 8.0 * M_PI * m_G_Newton * theory_vars.lapse *
+                        (Sij_TF_and_S.S + (GR_SPACEDIM - 2.) * rho_and_Si.rho)/(GR_SPACEDIM - 1.);
+    theory_rhs.Theta += 0.;
+    FOR(i, j)
+    {
+        theory_rhs.A[i][j] += -8. * M_PI * m_G_Newton * theory_vars.lapse *
+                              theory_vars.chi * Sij_TF_and_S.Sij_TF[i][j];
+    }
+    FOR(i)
+    {
+        FOR(j)
+        {
+            theory_rhs.Gamma[i] += - h_UU[i][j] * theory_vars.lapse * (16.0 * M_PI * m_G_Newton * rho_and_Si.Si[j])/ (1. + b_of_x);
+        }
+    }
+    }
+    else
+    {
     theory_rhs.K += 4.0 * M_PI * m_G_Newton * theory_vars.lapse *
                     (Sij_TF_and_S.S - 3 * rho_and_Si.rho / (1. + b_of_x));
     theory_rhs.Theta += -8. * M_PI * m_G_Newton * theory_vars.lapse *
@@ -212,6 +304,7 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
         theory_rhs.Gamma[i] += -16. * M_PI * m_G_Newton * theory_vars.lapse *
                                h_UU[i][j] * rho_and_Si.Si[j] / (1. + b_of_x);
     }
+    }
 }
 
 // Function to get full \kappa S_{ij}^{TF} (including LHS if needed) so as to
@@ -225,6 +318,7 @@ ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::get_full_kappa_times_Sij_TF(
     const Coordinates<data_t> &coords) const
 {
     const data_t chi_regularised = simd_max(theory_vars.chi, 1e-6);
+    const data_t lapse_regularised = simd_max(theory_vars.lapse, 1e-6);
     // Call CCZ4 RHS - work out GR RHS, no dissipation
     Vars<data_t> rhs;
     this->rhs_equation(rhs, theory_vars, d1, d2, advec);
@@ -242,9 +336,9 @@ ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::get_full_kappa_times_Sij_TF(
     // solve linear system for the theory fields that require it (e.g. 4dST)
     my_theory.solve_lhs(theory_rhs, theory_vars, d1, d2, advec, coords);
 
-    Tensor<2, data_t> out = -theory_rhs.A;
-    FOR(i, j) out[i][j] += rhs.A[i][j];
-    FOR(i, j) out[i][j] /= chi_regularised;
+    Tensor<2, data_t> out = rhs.A;
+    FOR(i, j) out[i][j] += -theory_rhs.A[i][j];
+    FOR(i, j) out[i][j] /= (chi_regularised * lapse_regularised);
 
     return out;
 }
