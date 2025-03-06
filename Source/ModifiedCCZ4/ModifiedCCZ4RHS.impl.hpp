@@ -150,12 +150,6 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
                         (((GR_SPACEDIM - 1.) / GR_SPACEDIM) * theory_vars.K *
                              theory_vars.K -
                          tr_A2 + ricci0.scalar);
-
-        FOR(i, j)
-        {
-            theory_rhs.Gamma[i] +=
-                -2. * factor_b_of_x * theory_vars.lapse * h_UU[i][j] * Ni[j];
-        }
     }
 
     else
@@ -177,25 +171,24 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
              0.5 * theory_vars.Theta * kappa1_times_lapse *
                  ((GR_SPACEDIM - 3.) / (2. + b_of_x) + (GR_SPACEDIM + 1.) +
                   this->m_params.kappa2 * (GR_SPACEDIM - 1.)));
+    }
 
-        FOR(i)
+    FOR(i)
+    {
+        theory_rhs.Gamma[i] +=
+            factor_b_of_x *
+            ((2.0 / (double)GR_SPACEDIM) *
+                 (theory_vars.lapse * theory_vars.K * Z_over_chi[i]) +
+             2. * kappa1_times_lapse * Z_over_chi[i]);
+        FOR(j)
         {
-            theory_rhs.Gamma[i] +=
-                factor_b_of_x *
-                ((2.0 / (double)GR_SPACEDIM) *
-                     (theory_vars.lapse * theory_vars.K * Z_over_chi[i]) +
-                 2. * kappa1_times_lapse * Z_over_chi[i]);
-            FOR(j)
+            theory_rhs.Gamma[i] += factor_b_of_x * 2. * h_UU[i][j] *
+                                   theory_vars.lapse * (-d1.Theta[j] - Ni[j]);
+            FOR(k)
             {
-                theory_rhs.Gamma[i] += factor_b_of_x * 2. * h_UU[i][j] *
-                                       theory_vars.lapse *
-                                       (-d1.Theta[j] - Ni[j]);
-                FOR(k)
-                {
-                    theory_rhs.Gamma[i] += factor_b_of_x * 2. *
-                                           theory_vars.lapse * A_UU[i][j] *
-                                           theory_vars.h[k][j] * Z_over_chi[k];
-                }
+                theory_rhs.Gamma[i] += factor_b_of_x * 2. * theory_vars.lapse *
+                                       A_UU[i][j] * theory_vars.h[k][j] *
+                                       Z_over_chi[k];
             }
         }
     }
