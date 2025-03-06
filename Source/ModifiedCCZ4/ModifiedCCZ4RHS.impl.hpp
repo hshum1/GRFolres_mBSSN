@@ -56,7 +56,7 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::compute(
 
       data_t sigma; // KO coefficient
 
-    if (m_rescale_sigma)
+    if (this->m_rescale_sigma)
     {
         // rescale KO coefficient with lapse so that it is zero near puncture
         sigma = this->m_sigma * pow(theory_vars.lapse, 6.0);
@@ -96,7 +96,7 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
     auto chris = compute_christoffel(d1.h, h_UU);
     Tensor<1, data_t> Z_over_chi;
 
-        if (m_formulation == CCZ4RHS<>::USE_BSSN)
+        if (this->m_formulation == CCZ4RHS<>::USE_BSSN)
     {
         FOR(i) Z_over_chi[i] = 0.0;
     }
@@ -139,7 +139,7 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
     else
         kappa1_times_lapse = this->m_params.kappa1 * theory_vars.lapse;
 
-    if (m_formulation == CCZ4RHS<>::USE_BSSN)
+    if (this->m_formulation == CCZ4RHS<>::USE_BSSN)
     {
 
         theory_rhs.Theta += 0.0;
@@ -253,11 +253,10 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
     data_t factor_b_of_x = b_of_x / (1. + b_of_x);
 
     // Update RHS
-    if (m_formulation == CCZ4RHS<>::USE_BSSN)
+    if (this->m_formulation == CCZ4RHS<>::USE_BSSN)
     {
     theory_rhs.K += 8.0 * M_PI * m_G_Newton * theory_vars.lapse *
-                        (Sij_TF_and_S.S + (GR_SPACEDIM - 2.) * rho_and_Si.rho)/(GR_SPACEDIM - 1.) + 0.5 * factor_b_of_x *
-                        theory_vars.lapse * (GR_SPACEDIM - 2.) / (GR_SPACEDIM - 1.) * (- 16.0 * M_PI * m_G_Newton * rho_and_Si.rho);
+                        (Sij_TF_and_S.S + (GR_SPACEDIM - 2.) * rho_and_Si.rho / (1. + b_of_x))/(GR_SPACEDIM - 1.);
     theory_rhs.Theta += 0.;
     }
     else

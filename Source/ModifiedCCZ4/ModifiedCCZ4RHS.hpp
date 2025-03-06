@@ -177,8 +177,6 @@ class ModifiedCCZ4RHS : public CCZ4RHS<gauge_t, deriv_t>
     theory_t my_theory; //!< The theory object, e.g. 4dST.
     gauge_t my_gauge;   //!< The gauge object, which includes a(x) and b(x)
     const std::array<double, CH_SPACEDIM> m_center; //!< The center of the grid
-    int m_formulation;
-    int m_rescale_sigma;
     double m_G_Newton;
 };
 

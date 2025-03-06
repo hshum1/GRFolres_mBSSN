@@ -124,12 +124,15 @@ class ModifiedGravitySimulationParametersBase : public SimulationParametersBase
                        (modified_ccz4_params.b0 > 0) &&
                            (modified_ccz4_params.b0 != modified_ccz4_params.a0),
                        "should be >0 and !=a(x)");
+        if (formulation == 0)
+        {
         check_parameter("kappa1", modified_ccz4_params.kappa1,
                         modified_ccz4_params.kappa1 > 0, "should be > 0");
         check_parameter("kappa2", modified_ccz4_params.kappa2,
                         modified_ccz4_params.kappa2 >
                             -2. / (2. + modified_ccz4_params.b0),
                         "should be > -2/(2+b(x))");
+        }
     }
 
   public:
