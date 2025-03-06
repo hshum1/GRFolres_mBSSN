@@ -39,12 +39,13 @@ int main(int argc, char *argv[])
 
     double dx = 1.;
     double sigma = 1.;
-    int  rescale_sigma = 0;
-    int  formulation = 0;
+    int rescale_sigma = 0;
+    int formulation = 0;
     double cosmological_constant = 0.;
 
     CCZ4RHS<ModifiedPunctureGauge, FourthOrderDerivatives> basic_ccz4_rhs(
-        m_modified_ccz4_params, dx, sigma, formulation, rescale_sigma, 0, cosmological_constant);
+        m_modified_ccz4_params, dx, sigma, formulation, rescale_sigma, 0,
+        cosmological_constant);
     basic_ccz4_rhs.rhs_equation(rhs, vars, d1, d2, advec);
 
     const IndexTM<int, 3> ind = {0, 0, 0};

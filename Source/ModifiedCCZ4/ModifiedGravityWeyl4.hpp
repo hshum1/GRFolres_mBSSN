@@ -35,10 +35,12 @@ class ModifiedGravityWeyl4 : public Weyl4,
                          gauge_t a_gauge,
                          const std::array<double, CH_SPACEDIM> a_center,
                          const double a_dx, double a_sigma,
-                         const int a_formulation = CCZ4RHS<>::USE_CCZ4, int a_rescale_sigma = 0)
+                         const int a_formulation = CCZ4RHS<>::USE_CCZ4,
+                         int a_rescale_sigma = 0)
         : Weyl4(a_center, a_dx, a_formulation),
           ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>(
-              a_theory, a_params, a_gauge, a_dx, a_sigma, a_formulation, a_rescale_sigma, a_center),
+              a_theory, a_params, a_gauge, a_dx, a_sigma, a_formulation,
+              a_rescale_sigma, a_center),
           my_theory(a_theory)
     {
     }

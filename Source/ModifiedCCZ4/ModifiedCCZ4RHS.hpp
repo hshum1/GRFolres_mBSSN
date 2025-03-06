@@ -119,7 +119,8 @@ class ModifiedCCZ4RHS : public CCZ4RHS<gauge_t, deriv_t>
        Newton's constant, which is set to one by default.
     */
     ModifiedCCZ4RHS(theory_t a_theory, modified_params_t a_params,
-                    gauge_t a_gauge, double a_dx, double a_sigma, int a_formulation, int a_rescale_sigma,
+                    gauge_t a_gauge, double a_dx, double a_sigma,
+                    int a_formulation, int a_rescale_sigma,
                     const std::array<double, CH_SPACEDIM> a_center,
                     double a_G_Newton = 1.0);
 

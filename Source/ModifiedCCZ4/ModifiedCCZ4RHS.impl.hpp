@@ -15,9 +15,10 @@
 template <class theory_t, class gauge_t, class deriv_t>
 ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::ModifiedCCZ4RHS(
     theory_t a_theory, modified_params_t a_params, gauge_t a_gauge, double a_dx,
-    double a_sigma, int a_formulation,int a_rescale_sigma, const std::array<double, CH_SPACEDIM> a_center,
-    double a_G_Newton)
-    : CCZ4RHS<gauge_t, deriv_t>(a_params, a_dx, a_sigma, a_formulation, a_rescale_sigma, 
+    double a_sigma, int a_formulation, int a_rescale_sigma,
+    const std::array<double, CH_SPACEDIM> a_center, double a_G_Newton)
+    : CCZ4RHS<gauge_t, deriv_t>(a_params, a_dx, a_sigma, a_formulation,
+                                a_rescale_sigma,
                                 0.0 /*No cosmological constant*/),
       my_theory(a_theory), my_gauge(a_gauge), m_center(a_center),
       m_G_Newton(a_G_Newton)
@@ -54,7 +55,7 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::compute(
     // solve linear system for the theory fields that require it (e.g. 4dST)
     my_theory.solve_lhs(theory_rhs, theory_vars, d1, d2, advec, coords);
 
-      data_t sigma; // KO coefficient
+    data_t sigma; // KO coefficient
 
     if (this->m_rescale_sigma)
     {
@@ -96,14 +97,14 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
     auto chris = compute_christoffel(d1.h, h_UU);
     Tensor<1, data_t> Z_over_chi;
 
-        if (this->m_formulation == CCZ4RHS<>::USE_BSSN)
+    if (this->m_formulation == CCZ4RHS<>::USE_BSSN)
     {
         FOR(i) Z_over_chi[i] = 0.0;
     }
     else
     {
-    FOR(i)
-    Z_over_chi[i] = 0.5 * (theory_vars.Gamma[i] - chris.contracted[i]);
+        FOR(i)
+        Z_over_chi[i] = 0.5 * (theory_vars.Gamma[i] - chris.contracted[i]);
     }
     auto ricci0 = CCZ4Geometry::compute_ricci_Z(theory_vars, d1, d2, h_UU,
                                                 chris, {0., 0., 0.});
@@ -144,55 +145,59 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
 
         theory_rhs.Theta += 0.0;
 
-        theory_rhs.K += 0.5 * factor_b_of_x *
-                        theory_vars.lapse * (GR_SPACEDIM - 2.) / (GR_SPACEDIM - 1.) * (((GR_SPACEDIM - 1.)/GR_SPACEDIM) * theory_vars.K * theory_vars.K
-                     - tr_A2 + ricci0.scalar);
+        theory_rhs.K += 0.5 * factor_b_of_x * theory_vars.lapse *
+                        (GR_SPACEDIM - 2.) / (GR_SPACEDIM - 1.) *
+                        (((GR_SPACEDIM - 1.) / GR_SPACEDIM) * theory_vars.K *
+                             theory_vars.K -
+                         tr_A2 + ricci0.scalar);
 
-        FOR(i,j)
+        FOR(i, j)
         {
-            theory_rhs.Gamma[i] += -2. * factor_b_of_x * theory_vars.lapse * h_UU[i][j] * Ni[j];
+            theory_rhs.Gamma[i] +=
+                -2. * factor_b_of_x * theory_vars.lapse * h_UU[i][j] * Ni[j];
         }
     }
-        
+
     else
     {
-    theory_rhs.K +=
-        factor_b_of_x *
-        (theory_vars.lapse * (-0.5 * theory_vars.K * theory_vars.K +
-                              0.5 * GR_SPACEDIM / (GR_SPACEDIM - 1.) *
-                                  (tr_A2 - ricci0.scalar)) +
-         kappa1_times_lapse * GR_SPACEDIM * theory_vars.Theta *
-             (1. + 0.5 * this->m_params.kappa2));
-
-    theory_rhs.Theta +=
-        factor_b_of_x *
-        (0.5 * theory_vars.lapse *
-             (tr_A2 - ricci0.scalar -
-              ((GR_SPACEDIM - 1.0) / (double)GR_SPACEDIM) * theory_vars.K *
-                  theory_vars.K) +
-         0.5 * theory_vars.Theta * kappa1_times_lapse *
-             ((GR_SPACEDIM - 3.) / (2. + b_of_x) + (GR_SPACEDIM + 1.) +
-              this->m_params.kappa2 * (GR_SPACEDIM - 1.)));
-
-    FOR(i)
-    {
-        theory_rhs.Gamma[i] +=
+        theory_rhs.K +=
             factor_b_of_x *
-            ((2.0 / (double)GR_SPACEDIM) *
-                 (theory_vars.lapse * theory_vars.K * Z_over_chi[i]) +
-             2. * kappa1_times_lapse * Z_over_chi[i]);
-        FOR(j)
+            (theory_vars.lapse * (-0.5 * theory_vars.K * theory_vars.K +
+                                  0.5 * GR_SPACEDIM / (GR_SPACEDIM - 1.) *
+                                      (tr_A2 - ricci0.scalar)) +
+             kappa1_times_lapse * GR_SPACEDIM * theory_vars.Theta *
+                 (1. + 0.5 * this->m_params.kappa2));
+
+        theory_rhs.Theta +=
+            factor_b_of_x *
+            (0.5 * theory_vars.lapse *
+                 (tr_A2 - ricci0.scalar -
+                  ((GR_SPACEDIM - 1.0) / (double)GR_SPACEDIM) * theory_vars.K *
+                      theory_vars.K) +
+             0.5 * theory_vars.Theta * kappa1_times_lapse *
+                 ((GR_SPACEDIM - 3.) / (2. + b_of_x) + (GR_SPACEDIM + 1.) +
+                  this->m_params.kappa2 * (GR_SPACEDIM - 1.)));
+
+        FOR(i)
         {
-            theory_rhs.Gamma[i] += factor_b_of_x * 2. * h_UU[i][j] *
-                                   theory_vars.lapse * (-d1.Theta[j] - Ni[j]);
-            FOR(k)
+            theory_rhs.Gamma[i] +=
+                factor_b_of_x *
+                ((2.0 / (double)GR_SPACEDIM) *
+                     (theory_vars.lapse * theory_vars.K * Z_over_chi[i]) +
+                 2. * kappa1_times_lapse * Z_over_chi[i]);
+            FOR(j)
             {
-                theory_rhs.Gamma[i] += factor_b_of_x * 2. * theory_vars.lapse *
-                                       A_UU[i][j] * theory_vars.h[k][j] *
-                                       Z_over_chi[k];
+                theory_rhs.Gamma[i] += factor_b_of_x * 2. * h_UU[i][j] *
+                                       theory_vars.lapse *
+                                       (-d1.Theta[j] - Ni[j]);
+                FOR(k)
+                {
+                    theory_rhs.Gamma[i] += factor_b_of_x * 2. *
+                                           theory_vars.lapse * A_UU[i][j] *
+                                           theory_vars.h[k][j] * Z_over_chi[k];
+                }
             }
         }
-    }
     }
 
     theory_rhs.lapse += factor_a_of_x * this->m_params.lapse_coeff *
@@ -255,16 +260,18 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
     // Update RHS
     if (this->m_formulation == CCZ4RHS<>::USE_BSSN)
     {
-    theory_rhs.K += 8.0 * M_PI * m_G_Newton * theory_vars.lapse *
-                        (Sij_TF_and_S.S + (GR_SPACEDIM - 2.) * rho_and_Si.rho / (1. + b_of_x))/(GR_SPACEDIM - 1.);
-    theory_rhs.Theta += 0.;
+        theory_rhs.K += 8.0 * M_PI * m_G_Newton * theory_vars.lapse *
+                        (Sij_TF_and_S.S +
+                         (GR_SPACEDIM - 2.) * rho_and_Si.rho / (1. + b_of_x)) /
+                        (GR_SPACEDIM - 1.);
+        theory_rhs.Theta += 0.;
     }
     else
     {
-    theory_rhs.K += 4.0 * M_PI * m_G_Newton * theory_vars.lapse *
-                    (Sij_TF_and_S.S - 3 * rho_and_Si.rho / (1. + b_of_x));
-    theory_rhs.Theta += -8. * M_PI * m_G_Newton * theory_vars.lapse *
-                        rho_and_Si.rho / (1. + b_of_x);
+        theory_rhs.K += 4.0 * M_PI * m_G_Newton * theory_vars.lapse *
+                        (Sij_TF_and_S.S - 3 * rho_and_Si.rho / (1. + b_of_x));
+        theory_rhs.Theta += -8. * M_PI * m_G_Newton * theory_vars.lapse *
+                            rho_and_Si.rho / (1. + b_of_x);
     }
 
     FOR(i, j)
