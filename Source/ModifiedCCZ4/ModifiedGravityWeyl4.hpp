@@ -31,7 +31,6 @@ class ModifiedGravityWeyl4 : public Weyl4,
     using modified_params_t = CCZ4_params_t<typename gauge_t::params_t>;
 
     //! Constructor
-    int a_rescale_sigma;
     ModifiedGravityWeyl4(theory_t a_theory, modified_params_t a_params,
                          gauge_t a_gauge,
                          const std::array<double, CH_SPACEDIM> a_center,

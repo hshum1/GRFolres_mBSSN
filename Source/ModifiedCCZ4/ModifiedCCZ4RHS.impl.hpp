@@ -19,7 +19,7 @@ ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::ModifiedCCZ4RHS(
     double a_G_Newton)
     : CCZ4RHS<gauge_t, deriv_t>(a_params, a_dx, a_sigma, a_formulation, a_rescale_sigma, 
                                 0.0 /*No cosmological constant*/),
-      my_theory(a_theory), my_gauge(a_gauge), m_center(a_center), m_formulation(a_formulation),  m_rescale_sigma(a_rescale_sigma),
+      my_theory(a_theory), my_gauge(a_gauge), m_center(a_center),
       m_G_Newton(a_G_Newton)
 {
 }
@@ -141,27 +141,19 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_a_and_b_rhs(
 
     if (m_formulation == CCZ4RHS<>::USE_BSSN)
     {
-        // Calculate elements of the decomposed stress energy tensor
-        RhoAndSi<data_t> rho_and_Si =
-            my_theory.compute_rho_and_Si(theory_vars, d1, d2, coords);
-        //SijTFAndS<data_t> Sij_TF_and_S =
-        //    my_theory.compute_Sij_TF_and_S(theory_vars, d1, d2, advec, coords);
 
         theory_rhs.Theta += 0.0;
 
         theory_rhs.K += 0.5 * factor_b_of_x *
                         theory_vars.lapse * (GR_SPACEDIM - 2.) / (GR_SPACEDIM - 1.) * (((GR_SPACEDIM - 1.)/GR_SPACEDIM) * theory_vars.K * theory_vars.K
-                     - tr_A2 + ricci0.scalar - 16.0 * M_PI * m_G_Newton * rho_and_Si.rho);
+                     - tr_A2 + ricci0.scalar);
 
-        FOR(i)
+        FOR(i,j)
         {
-            FOR(j)
-            {
-                theory_rhs.Gamma[i] += 2. * theory_vars.lapse * h_UU[i][j] * Ni[j]/(1. + b_of_x);
-            }
+            theory_rhs.Gamma[i] += -2. * factor_b_of_x * theory_vars.lapse * h_UU[i][j] * Ni[j];
         }
-        
     }
+        
     else
     {
     theory_rhs.K +=
@@ -246,15 +238,6 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
         }
     }
 
-    Tensor<1, data_t> Ni;
-    FOR(i) { Ni[i] = -(GR_SPACEDIM - 1.) * d1.K[i] / (double)GR_SPACEDIM; }
-    FOR(i, j, k)
-    {
-        Ni[i] += h_UU[j][k] * (covdtilde_A[k][j][i] -
-                               GR_SPACEDIM * theory_vars.A[i][j] * d1.chi[k] /
-                                   (2. * chi_regularised));
-    }
-
     // Calculate elements of the decomposed stress energy tensor
     RhoAndSi<data_t> rho_and_Si =
         my_theory.compute_rho_and_Si(theory_vars, d1, d2, coords);
@@ -273,20 +256,9 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
     if (m_formulation == CCZ4RHS<>::USE_BSSN)
     {
     theory_rhs.K += 8.0 * M_PI * m_G_Newton * theory_vars.lapse *
-                        (Sij_TF_and_S.S + (GR_SPACEDIM - 2.) * rho_and_Si.rho)/(GR_SPACEDIM - 1.);
+                        (Sij_TF_and_S.S + (GR_SPACEDIM - 2.) * rho_and_Si.rho)/(GR_SPACEDIM - 1.) + 0.5 * factor_b_of_x *
+                        theory_vars.lapse * (GR_SPACEDIM - 2.) / (GR_SPACEDIM - 1.) * (- 16.0 * M_PI * m_G_Newton * rho_and_Si.rho);
     theory_rhs.Theta += 0.;
-    FOR(i, j)
-    {
-        theory_rhs.A[i][j] += -8. * M_PI * m_G_Newton * theory_vars.lapse *
-                              theory_vars.chi * Sij_TF_and_S.Sij_TF[i][j];
-    }
-    FOR(i)
-    {
-        FOR(j)
-        {
-            theory_rhs.Gamma[i] += - h_UU[i][j] * theory_vars.lapse * (16.0 * M_PI * m_G_Newton * rho_and_Si.Si[j])/ (1. + b_of_x);
-        }
-    }
     }
     else
     {
@@ -294,6 +266,8 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
                     (Sij_TF_and_S.S - 3 * rho_and_Si.rho / (1. + b_of_x));
     theory_rhs.Theta += -8. * M_PI * m_G_Newton * theory_vars.lapse *
                         rho_and_Si.rho / (1. + b_of_x);
+    }
+
     FOR(i, j)
     {
         theory_rhs.A[i][j] += -8. * M_PI * m_G_Newton * theory_vars.lapse *
@@ -303,7 +277,6 @@ void ModifiedCCZ4RHS<theory_t, gauge_t, deriv_t>::add_emtensor_rhs(
     {
         theory_rhs.Gamma[i] += -16. * M_PI * m_G_Newton * theory_vars.lapse *
                                h_UU[i][j] * rho_and_Si.Si[j] / (1. + b_of_x);
-    }
     }
 }
 
