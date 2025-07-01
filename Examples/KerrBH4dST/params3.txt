@@ -7,7 +7,7 @@
 verbosity = 0
 
 # location / naming of output files
-output_path = "/cosma8/data/dp325/dc-shum2/mBSSN/Kerr/rescale_sigma0/GR_N128" # Main path for all files. Must exist!
+output_path = "/cosma8/data/dp325/dc-shum2/mBSSN/Kerr/rescale_sigma0/GR_N96" # Main path for all files. Must exist!
 chk_prefix = KerrBH4dST_
 plot_prefix = KerrBH4dSTp_
 # restart_file = /cosma8/data/dp325/dc-shum2/mBSSN/Kerr/GB_modgauge/hdf5/KerrBH4dST_000200.3d.hdf5
@@ -60,7 +60,7 @@ kerr_spin = 0.7
 # NB - if you have a non-cubic grid, you can specify 'N1' or 'N1_full',
 # 'N2' or 'N2_full' and 'N3' or 'N3_full' ( then dx_coarsest = L/N(max) )
 # NB - the N values need to be multiples of the block_factor
-N_full = 128
+N_full = 96
 L_full = 512
 
 # Maximum number of times you can regrid above coarsest level

@@ -15,6 +15,7 @@
 #include "Tensor.hpp"
 #include "simd.hpp"
 #include <array>
+#include <cmath>
 
 //!  Calculates the Hamiltonian and Momentum constraints with the theory fields
 /*!
@@ -55,7 +56,7 @@ template <class theory_t> class ModifiedGravityConstraints : public Constraints
     ModifiedGravityConstraints(const theory_t a_theory, double dx,
                                const std::array<double, CH_SPACEDIM> a_center,
                                double G_Newton, int a_c_Ham,
-                               const Interval &a_c_Moms,
+                               const Interval &a_c_Moms, double spin,
                                int a_c_Ham_abs_terms = -1,
                                const Interval &a_c_Moms_abs_terms = Interval());
 
@@ -67,6 +68,7 @@ template <class theory_t> class ModifiedGravityConstraints : public Constraints
     theory_t my_theory; //!< The theory object, e.g. 4dST
     const std::array<double, CH_SPACEDIM> m_center; //!< The center of the grid
     double m_G_Newton;
+    double m_spin;
 };
 
 #include "ModifiedGravityConstraints.impl.hpp"

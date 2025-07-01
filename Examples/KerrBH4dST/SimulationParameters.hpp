@@ -33,14 +33,14 @@ class SimulationParameters : public ModifiedGravitySimulationParametersBase<
     {
         // Do we want diagnostic norm calculation?
         pp.load("calculate_diagnostic_norms", calculate_diagnostic_norms,
-                false);
+                true);
 
         // Coupling and potential
         pp.load("lambda_GB", coupling_and_potential_params.lambda_GB, 0.);
-        pp.load("quadratic_factor",
-                coupling_and_potential_params.quadratic_factor, 0.);
-        pp.load("quartic_factor", coupling_and_potential_params.quartic_factor,
-                0.);
+        //pp.load("quadratic_factor",
+        //        coupling_and_potential_params.quadratic_factor, 0.);
+        //pp.load("quartic_factor", coupling_and_potential_params.quartic_factor,
+        //        0.);
         pp.load("cutoff_GB", coupling_and_potential_params.cutoff_GB, 0.15);
         pp.load("factor_GB", coupling_and_potential_params.factor_GB, 100.);
         pp.load("scalar_mass", coupling_and_potential_params.scalar_mass, 0.);

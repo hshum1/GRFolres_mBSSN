@@ -23,6 +23,8 @@ enum
     c_rho_g3,
     c_rho_GB,
 
+    c_Ham_excised,
+
     NUM_DIAGNOSTIC_VARS
 };
 
@@ -35,7 +37,9 @@ static const std::array<std::string, NUM_DIAGNOSTIC_VARS> variable_names = {
 
     "Weyl4_Re", "Weyl4_Im",
 
-    "rho_phi",  "rho_g2",   "rho_g3", "rho_GB"};
+    "rho_phi",  "rho_g2",   "rho_g3", "rho_GB",
+    
+    "Ham_excised"};
 }
 
 #endif /* DIAGNOSTICVARIABLES_HPP */

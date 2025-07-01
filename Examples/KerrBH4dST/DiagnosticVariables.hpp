@@ -15,10 +15,18 @@ enum
     c_Mom2,
     c_Mom3,
 
+    c_Madm,
+    c_Jadm,
+
+    c_Weyl4_Re,
+    c_Weyl4_Im,
+
     c_rho_phi,
     c_rho_g2,
     c_rho_g3,
     c_rho_GB,
+
+    c_Ham_excised,
 
     NUM_DIAGNOSTIC_VARS
 };
@@ -30,7 +38,13 @@ static const std::array<std::string, NUM_DIAGNOSTIC_VARS> variable_names = {
 
     "Mom1",    "Mom2",   "Mom3",
 
-    "rho_phi", "rho_g2", "rho_g3", "rho_GB"};
+    "M_adm", "J_adm",
+
+    "Weyl4_Re", "Weyl4_Im",
+
+    "rho_phi", "rho_g2", "rho_g3", "rho_GB",
+    
+    "Ham_excised"};
 }
 
 #endif /* DIAGNOSTICVARIABLES_HPP */

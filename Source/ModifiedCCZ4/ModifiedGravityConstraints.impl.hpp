@@ -16,11 +16,11 @@ template <class theory_t>
 ModifiedGravityConstraints<theory_t>::ModifiedGravityConstraints(
     const theory_t a_theory, double dx,
     const std::array<double, CH_SPACEDIM> a_center, double G_Newton,
-    int a_c_Ham, const Interval &a_c_Moms, int a_c_Ham_abs_terms /* defaulted*/,
+    int a_c_Ham, const Interval &a_c_Moms, double spin, int a_c_Ham_abs_terms /* defaulted*/,
     const Interval &a_c_Moms_abs_terms /*defaulted*/)
     : Constraints(dx, a_c_Ham, a_c_Moms, a_c_Ham_abs_terms, a_c_Moms_abs_terms,
                   0.0 /*No cosmological constant*/),
-      my_theory(a_theory), m_center(a_center), m_G_Newton(G_Newton)
+      my_theory(a_theory), m_center(a_center), m_G_Newton(G_Newton), m_spin(spin)
 {
 }
 
@@ -67,6 +67,10 @@ void ModifiedGravityConstraints<theory_t>::compute(
     }
     // Write the constraints into the output FArrayBox
     store_vars(out, current_cell);
+
+    data_t chi_0 = 0.2 * sqrt(1-m_spin*m_spin);
+    data_t Ham_excised = out.Ham/(1+exp(-1000*(vars.chi-chi_0)));
+    current_cell.store_vars(Ham_excised, c_Ham_excised);
 }
 
 #endif /* MODIFIEDGRAVITYCONSTRAINTS_IMPL_HPP_ */

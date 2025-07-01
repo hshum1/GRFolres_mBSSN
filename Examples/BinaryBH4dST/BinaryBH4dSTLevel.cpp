@@ -206,7 +206,7 @@ void BinaryBH4dSTLevel::specificPostTimeStep()
         BoxLoops::loop(ModifiedGravityConstraints<
                            FourDerivScalarTensorWithCouplingAndPotential>(
                            fdst, m_dx, m_p.center, m_p.G_Newton, c_Ham,
-                           Interval(c_Mom1, c_Mom3)),
+                           Interval(c_Mom1, c_Mom3),0.7),
                        m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
         if (m_level == 0)
         {
@@ -263,7 +263,7 @@ void BinaryBH4dSTLevel::prePlotLevel()
         ModifiedGravityConstraints<
             FourDerivScalarTensorWithCouplingAndPotential>
             constraints(fdst, m_dx, m_p.center, m_p.G_Newton, c_Ham,
-                        Interval(c_Mom1, c_Mom3));
+                        Interval(c_Mom1, c_Mom3),0.7);
         ModifiedPunctureGauge modified_puncture_gauge(m_p.modified_ccz4_params);
         ModifiedGravityWeyl4<FourDerivScalarTensorWithCouplingAndPotential,
                              ModifiedPunctureGauge, FourthOrderDerivatives>

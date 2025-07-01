@@ -18,6 +18,11 @@
 #include "SixthOrderDerivatives.hpp"
 #include "SmallDataIO.hpp"
 #include "TraceARemoval.hpp"
+#include "ModifiedGravityWeyl4.hpp"
+#include "ScalarExtraction.hpp"
+#include "WeylExtraction.hpp"
+#include "ADMQuantities.hpp"
+#include "ADMQuantitiesExtraction.hpp"
 
 // Initial data
 #include "GammaCalculator.hpp"
@@ -61,7 +66,7 @@ void KerrBH4dSTLevel::initialData()
                                                        m_p.G_Newton);
     ModifiedGravityConstraints<FourDerivScalarTensorWithCouplingAndPotential>
         constraints(fdst, m_dx, m_p.center, m_p.G_Newton, c_Ham,
-                    Interval(c_Mom1, c_Mom3));
+                    Interval(c_Mom1, c_Mom3),m_p.kerr_params.spin);
     BoxLoops::loop(constraints, m_state_new, m_state_diagnostics,
                    EXCLUDE_GHOST_CELLS);
 #endif
@@ -70,22 +75,36 @@ void KerrBH4dSTLevel::initialData()
 #ifdef CH_USE_HDF5
 void KerrBH4dSTLevel::prePlotLevel()
 {
-#ifdef USE_AHFINDER
-    // already calculated in 'specificPostTimeStep'
-    if (m_bh_amr.m_ah_finder.need_diagnostics(m_dt, m_time))
-        return;
-#endif
 
-    CouplingAndPotential coupling_and_potential(
-        m_p.coupling_and_potential_params);
-    FourDerivScalarTensorWithCouplingAndPotential fdst(coupling_and_potential,
-                                                       m_p.G_Newton);
     fillAllGhosts();
-    ModifiedGravityConstraints<FourDerivScalarTensorWithCouplingAndPotential>
-        constraints(fdst, m_dx, m_p.center, m_p.G_Newton, c_Ham,
-                    Interval(c_Mom1, c_Mom3));
-    BoxLoops::loop(constraints, m_state_new, m_state_diagnostics,
-                   EXCLUDE_GHOST_CELLS);
+    if (m_p.activate_extraction == 1)
+    {
+        CouplingAndPotential coupling_and_potential(
+            m_p.coupling_and_potential_params);
+        FourDerivScalarTensorWithCouplingAndPotential fdst(
+            coupling_and_potential, m_p.G_Newton);
+        ModifiedGravityConstraints<
+            FourDerivScalarTensorWithCouplingAndPotential>
+            constraints(fdst, m_dx, m_p.center, m_p.G_Newton, c_Ham,
+                        Interval(c_Mom1, c_Mom3),m_p.kerr_params.spin);
+        ModifiedPunctureGauge modified_puncture_gauge(m_p.modified_ccz4_params);
+        ModifiedGravityWeyl4<FourDerivScalarTensorWithCouplingAndPotential,
+                             ModifiedPunctureGauge, FourthOrderDerivatives>
+            weyl4(fdst, m_p.modified_ccz4_params, modified_puncture_gauge,
+                  m_p.extraction_params.extraction_center, m_dx, m_p.sigma,
+                  CCZ4RHS<>::USE_CCZ4);
+        // CCZ4 is required since this code only works in this formulation
+        auto compute_pack =
+            make_compute_pack(weyl4, constraints);
+        BoxLoops::loop(compute_pack, m_state_new, m_state_diagnostics,
+                       EXCLUDE_GHOST_CELLS);
+    }
+
+#ifdef USE_AHFINDER
+  // already calculated in 'specificPostTimeStep'
+  if (m_bh_amr.m_ah_finder.need_diagnostics(m_dt, m_time))
+  return;
+#endif
 }
 #endif /* CH_USE_HDF5 */
 
@@ -166,6 +185,70 @@ void KerrBH4dSTLevel::specificPostTimeStep()
     BoxLoops::loop(rho_diagnostics, m_state_new, m_state_diagnostics,
                    EXCLUDE_GHOST_CELLS);
 
+if (m_p.activate_extraction == 1 || m_p.activate_scalar_extraction == 1)
+    {
+        int min_level = m_p.extraction_params.min_extraction_level();
+        bool calculate_weyl = at_level_timestep_multiple(min_level);
+        if (calculate_weyl)
+        {
+            // Populate the Weyl Scalar values on the grid
+            fillAllGhosts();
+            CouplingAndPotential coupling_and_potential(
+                m_p.coupling_and_potential_params);
+            FourDerivScalarTensorWithCouplingAndPotential fdst(
+                coupling_and_potential, m_p.G_Newton);
+            ModifiedPunctureGauge modified_puncture_gauge(
+                m_p.modified_ccz4_params);
+            ModifiedGravityWeyl4<FourDerivScalarTensorWithCouplingAndPotential,
+                                 ModifiedPunctureGauge, FourthOrderDerivatives>
+                weyl4(fdst, m_p.modified_ccz4_params, modified_puncture_gauge,
+                      m_p.extraction_params.extraction_center, m_dx, m_p.sigma,
+                      CCZ4RHS<>::USE_CCZ4);
+            // CCZ4 is required since this code only works in this
+            // formulation
+            auto compute_pack = make_compute_pack(weyl4,
+                       ADMQuantities(m_p.extraction_params.center, m_dx,
+                                    c_Madm, c_Jadm));
+            BoxLoops::loop(compute_pack, m_state_new, m_state_diagnostics,
+                           EXCLUDE_GHOST_CELLS);
+
+            // Do the extraction on the min extraction level
+            if (m_level == min_level)
+            {
+                //CH_TIME("ADMExtraction");
+                m_gr_amr.m_interpolator->refresh();
+                ADMQuantitiesExtraction adm_extraction(
+                    m_p.extraction_params, m_dt, m_time, m_restart_time, c_Madm,
+                    c_Jadm);
+                adm_extraction.execute_query(m_gr_amr.m_interpolator);
+                
+                CH_TIME("WeylExtraction");
+                // Now refresh the interpolator and do the interpolation
+                // fill ghosts manually to minimise communication
+                bool fill_ghosts = false;
+                m_gr_amr.m_interpolator->refresh(fill_ghosts);
+                m_gr_amr.fill_multilevel_ghosts(
+                    VariableType::diagnostic, Interval(c_Weyl4_Re, c_Weyl4_Im),
+                    min_level);
+                if (m_p.activate_extraction)
+                {
+                    WeylExtraction my_extraction(m_p.extraction_params, m_dt,
+                                                 m_time, first_step,
+                                                 m_restart_time);
+                    my_extraction.execute_query(m_gr_amr.m_interpolator);
+                }
+
+                if (m_p.activate_scalar_extraction)
+                {
+                    ScalarExtraction phi_extraction(
+                        m_p.scalar_extraction_params, m_dt, m_time, first_step,
+                        m_restart_time);
+                    phi_extraction.execute_query(m_gr_amr.m_interpolator);
+                }
+            }
+        }
+    }
+
     if (m_p.calculate_diagnostic_norms)
     {
         CouplingAndPotential coupling_and_potential(
@@ -176,13 +259,13 @@ void KerrBH4dSTLevel::specificPostTimeStep()
         BoxLoops::loop(ModifiedGravityConstraints<
                            FourDerivScalarTensorWithCouplingAndPotential>(
                            fdst, m_dx, m_p.center, m_p.G_Newton, c_Ham,
-                           Interval(c_Mom1, c_Mom3)),
+                           Interval(c_Mom1, c_Mom3),m_p.kerr_params.spin),
                        m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
         if (m_level == 0)
         {
             AMRReductions<VariableType::diagnostic> amr_reductions(m_gr_amr);
             bool normalise_by_volume = true;
-            double L2_Ham = amr_reductions.norm(c_Ham, 2, normalise_by_volume);
+            double L2_Ham = amr_reductions.norm(c_Ham_excised, 2, normalise_by_volume);
             double L2_Mom = amr_reductions.norm(Interval(c_Mom1, c_Mom3), 2,
                                                 normalise_by_volume);
             double L2_rho_phi =

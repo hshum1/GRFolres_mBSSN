@@ -37,7 +37,7 @@ class SimulationParameters : public ModifiedGravitySimulationParametersBase<
         pp.load("track_punctures", track_punctures, false);
         pp.load("puncture_tracking_level", puncture_tracking_level, max_level);
         pp.load("calculate_constraint_norms", calculate_constraint_norms,
-                false);
+                true);
 
         // Coupling and potential
         pp.load("lambda_GB", coupling_and_potential_params.lambda_GB, 0.);
